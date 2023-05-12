@@ -23,7 +23,7 @@ public class FileServiceImpl implements FileService {
 
         if ((fileDTO.getFilePath() != null) && pdfParserService.readPDFFile(fileDTO.getFilePath())) {
             List<String> lines = PDFParserService.lines;
-            printLines(lines);
+            /*printLines(lines);*/
             List<SampleResultGrouping> list = new ArrayList<>();
             SampleResultGrouping sampleResultGrouping = null;
             for (int i = 0; i < lines.size(); i++) {
@@ -37,7 +37,9 @@ public class FileServiceImpl implements FileService {
                     sampleResultGrouping = new SampleResultGrouping();
                     sampleResultGrouping.setStart(i + 1);
                 }
+
             }
+
             List<Sample> samples = getSamples(list, lines);
 
 
@@ -57,6 +59,7 @@ public class FileServiceImpl implements FileService {
 
     private List<Sample> getSamples(List<SampleResultGrouping> sampleResultGroupingList, List<String> lines) {
         List<Sample> samples = new ArrayList<>();
+        List<Result> results;
         int start, end, i;
         Sample sample;
         String value, matrixType;
@@ -68,7 +71,7 @@ public class FileServiceImpl implements FileService {
             i = 0;
             while (start <= end) {
                 if (i == 0) {
-                    value = lines.get(start).trim().replaceAll(" +"," ");
+                    value = lines.get(start).trim().replaceAll(" +", " ");
                     if (value.endsWith("Water")) {
                         int index = value.lastIndexOf(" ", value.lastIndexOf(" ") - 1);
                         sample.setDescription(value.substring(0, index));
@@ -90,10 +93,13 @@ public class FileServiceImpl implements FileService {
                     sample.setTime(lines.get(start));
                 } else if (i == 4) {
                     sample.setLabRef(lines.get(start));
-                    value = lines.get(start+1);
-                    if (!value.contains("Legionella")) {
-                        sample.setDescription(sample.getDescription()+" "+value.trim());
+                    value = lines.get(start + 1);
+                    if (isDescription(value)) {
+                        sample.setDescription(sample.getDescription() + " " + value.trim());
+                        start++;
                     }
+                    System.out.println("!!! "+sample);
+                    results = getResults(start + 1, end, lines);
                     break;
                 }
                 i++;
@@ -101,5 +107,49 @@ public class FileServiceImpl implements FileService {
             }
         }
         return samples;
+    }
+
+    private boolean isDescription(String value) {
+        char[] ch = value.toCharArray();
+        int letter = 0;
+        int num = 0;
+        for (int i = 0; i < value.length(); i++) {
+            if (Character.isLetter(ch[i])) {
+                letter++;
+            } else if (Character.isDigit(ch[i])) {
+                num++;
+            }
+
+        }
+        return (letter < num);
+    }
+
+    private List<Result> getResults(int start, int end, List<String> lines) {
+        List<Result> results = new ArrayList<>();
+        Result result = null;
+        String value;
+        int i = 0;
+        while (start <= end) {
+            if (i == 0) {
+                result = new Result();
+                value = lines.get(start).trim().replaceAll(" +", " ");
+                result.setDescription(value);
+                i++;
+            } else if (i == 1) {
+                result.setResult(lines.get(start));
+                i++;
+            } else if (i == 2) {
+                result.setMethod(lines.get(start));
+                value = lines.get(start + 1);
+                if (value.contains("species")) {
+                    result.setLabRef(value);
+                    start++;
+                }
+                 System.out.println("!!! "+result);
+                i = 0;
+            }
+            start++;
+        }
+        return results;
     }
 }

@@ -6,6 +6,5 @@ import lombok.Data;
 public class SampleResultGrouping {
 
     private int start;
-    private int middle;
     private int end;
 }
